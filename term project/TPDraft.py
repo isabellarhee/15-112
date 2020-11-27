@@ -62,6 +62,7 @@ class GameMode(Mode):
         mode.topSpeed = 100
 
         
+        
     def keyPressed(mode, event):
         if event.key == 'm':
             mode.app.setActiveMode(mode.app.MenuMode)
