@@ -3,16 +3,23 @@
 #pygame.init() # wut figure out how to do this
 from cmu_112_graphics import *
 import random
+import math
 
 #---------------------------------Start mode----------------------------------
 class StartMode(Mode): 
+    def appStarted(mode):
+        mode.background = mode.loadImage('buggy.png')
+        mode.background = mode.scaleImage(mode.background, 5/3)
 
     def redrawAll(mode, canvas):
-        #draw an image for the title screen
+        canvas.create_image(mode.width/2, mode.height/2,\
+            image=ImageTk.PhotoImage(mode.background))
         #add background music
-        canvas.create_rectangle(0,0,mode.width,mode.height, fill = 'plum')
-        canvas.create_text(mode.width//2, 150, text = "splashpage", fill = \
-           'black' )
+        font = 'Impact 55'
+        canvas.create_text(mode.width//2, 100, text = "CMU Buggy Racer", fill =\
+           'black', font = font )
+        canvas.create_text(mode.width//2, mode.height-100,\
+             text = 'press any button to continue', font = 'Impact 20')
         
     def keyPressed(mode, event):
         mode.app.setActiveMode(mode.app.MenuMode)
@@ -30,9 +37,16 @@ class Racer(object):
         self.character = 'red'
         #self.image =
         self.xc = appwidth//2
-        self.xy = appwidth//2
+        self.yc = appwidth//2
         self.scrollX = 0
         self.scrollY = 0
+        self.angle = 0
+        self.length = 30
+        self.width = 10
+        self.points = [(self.xc-self.width, self.yc-self.length),\
+            (self.xc-self.width, self.yc+self.length),\
+                (self.xc+self.width, self.yc+self.length),\
+                    (self.xc+self.width, self.yc-self.length)]
         
 
 class Opponent(Racer):
@@ -48,6 +62,53 @@ def setTrack(grid, rows, cols): #going to make this randomly generating
     for row in range(rows):
         grid[row][10] = True
 
+def createTrack(grid, rows, cols):
+    #make it a little more likely to go straight ahead by adding it twice 
+    #in my list
+    directions = [(1,0), (0,1), (-1,0),(0,-1), (0,-1)]
+
+    tempgrid = copy.deepcopy(grid)
+    visited = set()
+    targetRow, targetCol = 0, cols//2
+    def solve(row,col):
+        #base cases
+        if (row, col) in visited:
+            return False
+        visited.add((row, col))
+        if (row, col) == (targetRow, targetCol): return True
+        #randomize directions
+        random.shuffle(directions)
+        for stepx, stepy in directions:
+            if isValid(tempgrid, row+stepy, col+stepx, visited):
+                if solve(row+stepy, col+stepx):
+                    return True
+
+        visited.remove((row,col))
+        return False
+
+    if solve(rows-1, cols//2):
+        for r,c in visited:
+            tempgrid[r][c] = True
+        return tempgrid
+    else:
+        return grid
+
+def isValid(tempgrid, row, col, visited):
+    rows,cols = len(tempgrid),len(tempgrid[0])
+    if not (0<=row<rows and 0<=col<cols): 
+        return False
+    directions = [(1,0), (0,1), (-1,0),(0,-1)]
+    sideCounter = 0
+    #check to make sure it's not just a big blob, more of a "path"
+    for drow, dcol in directions:
+        if (drow+row, dcol+col) in visited:
+            sideCounter += 1
+
+    if sideCounter < 2:
+        return True
+    else:
+        return False
+
 #---------------------------Game Mode------------------------------------------
 
 class GameMode(Mode):
@@ -55,29 +116,65 @@ class GameMode(Mode):
         mode.rows = 20
         mode.cols = 20
         mode.grid = make2dList(mode.rows, mode.cols)
+        mode.grid = createTrack(mode.grid, mode.rows, mode.cols)
         mode.cellSize = 20
         #name = mode.getUserInput('Enter your name:')
         mode.player = Racer('name', mode.width, mode.height)
         mode.friction = 1
         mode.topSpeed = 100
+        mode.racers = []
+        mode.racers.append(mode.player)
+        mode.offsetX = 200
+        mode.offsetY = 150
 
-        
-        
     def keyPressed(mode, event):
         if event.key == 'm':
             mode.app.setActiveMode(mode.app.MenuMode)
-        elif event.key == 'Right' and mode.player.scrollX <= mode.topSpeed:
-            mode.player.scrollX += 20
-        elif event.key == 'Left' and abs(mode.player.scrollX) <= mode.topSpeed:
-            mode.player.scrollX -= 20
+        elif event.key == 'Right':
+            if mode.player.scrollX <= mode.topSpeed:
+                mode.player.scrollX += 10
+            if mode.player.angle <= 50:
+                mode.player.angle += 10
+                mode.turnRacer(mode.player)
+        elif event.key == 'Left':
+            if mode.player.scrollX >= -1*mode.topSpeed:
+                mode.player.scrollX -= 10
+            if mode.player.angle >= -50: 
+                mode.player.angle -= 10
+                mode.turnRacer(mode.player)
         elif event.key == 'Up' and mode.player.scrollY <= mode.topSpeed:
             mode.player.scrollY -= 20
-        elif event.key == 'Down' and abs(mode.player.scrollY) <= mode.topSpeed:
+        elif event.key == 'Down' and mode.player.scrollY >= -1*mode.topSpeed:
             mode.player.scrollY += 20
 
+
+#https://stackoverflow.com/questions/36620766/rotating-a-square-on-tkinter-canvas
+    def rotateRacer(mode, points, angle, center):
+        angle = math.radians(angle)
+        cos_val = math.cos(angle)
+        sin_val = math.sin(angle)
+        cx, cy = center
+        new_points = []
+        for x_old, y_old in points:
+            x_old -= cx
+            y_old -= cy
+            x_new = x_old * cos_val - y_old * sin_val
+            y_new = x_old * sin_val + y_old * cos_val
+            new_points.append([x_new + cx, y_new + cy])
+        return new_points
+
+    def turnRacer(mode, player):
+        center = (player.xc, player.yc)
+        player.points = \
+            mode.rotateRacer(player.points, player.angle, center)
+
+    def updateRacer(mode, player):
+        mode.offsetX -= player.scrollX
+        mode.offsetY -= player.scrollY
+
     def drawCell(mode, canvas, row, col, color):
-        x0 = (mode.cellSize * col) + 200 
-        y0 = (mode.cellSize * row)  + 150
+        x0 = (mode.cellSize * col) + mode.offsetX
+        y0 = (mode.cellSize * row)  + mode.offsetY
         x1 = x0 + mode.cellSize
         y1= y0 + mode.cellSize
         x0 -= mode.player.scrollX
@@ -88,13 +185,12 @@ class GameMode(Mode):
                 width = 2)    
 
     def drawPlayer(mode, canvas):
-        cx = mode.width/2
-        cy = mode.width/2
-        canvas.create_rectangle(cx, cy, cx+10, cy+30, fill = 'red')
-        canvas.create_text(cx+5, cy-5, text = mode.player.name)
+        canvas.create_polygon(mode.player.points, fill='red')
+        canvas.create_text(mode.player.xc, mode.player.yc-15,\
+            text=mode.player.name)
 
     def drawTrack(mode, canvas):
-        setTrack(mode.grid, mode.rows, mode.cols)
+        #setTrack(mode.grid, mode.rows, mode.cols)
         for r in range(mode.rows):
             for c in range(mode.cols):
                 if mode.grid[r][c] == True:
@@ -110,7 +206,9 @@ class GameMode(Mode):
         mode.drawPlayer(canvas)
     
     def timerFired(mode):
+        mode.updateRacer(mode.player)
         #slowing down the thingy
+        
         if mode.player.scrollX > 0:
             mode.player.scrollX -= mode.friction
         elif mode.player.scrollX < 0:
@@ -121,20 +219,24 @@ class GameMode(Mode):
         elif mode.player.scrollY < 0:
             mode.player.scrollY += mode.friction
 
-
-
+        
 #-----------------------------Menu Mode----------------------------------------
 
 class MenuMode(Mode):
-    def appStarted(app):
+    def appStarted(mode):
         buttons = []
+        mode.background = mode.loadImage('tartan.png')
+        mode.background = mode.scaleImage(mode.background, 5/3)
 
     def redrawAll(mode, canvas):
-        canvas.create_rectangle(0,0,mode.width,mode.height, fill = 'honeydew')
-        font = 'Arial 26 bold'
-        canvas.create_text(mode.width/2, 100, text='Main Menu', font=font)
-        #drawButtons(mode, canvas)
+        canvas.create_image(mode.width/2, mode.height/2,\
+            image=ImageTk.PhotoImage(mode.background))
+        font = 'Impact 50'
+        canvas.create_text(mode.width/2, 100, text='Main Menu',fill = 'red',\
+            font=font)
+        mode.drawButtons(canvas)
 
+    def drawButtons(mode, canvas):
         #start game button
         font = 'Arial 24 bold'
         canvas.create_rectangle(mode.width/2-100, 250, mode.width/2+100, 280, \
@@ -180,4 +282,4 @@ class MyModalApp(ModalApp):
         app.setActiveMode(app.StartMode)
         app.timerDelay = 50
 
-app = MyModalApp(width=800, height=600)
+app = MyModalApp(width=800, height=800)
