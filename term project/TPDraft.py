@@ -1,6 +1,7 @@
 #term projedct ting by Isabella Rhee
-#import pygame
-#pygame.init() # wut figure out how to do this
+
+#cmu graphics from 
+#http://www.cs.cmu.edu/~112/notes/notes-animations-part3.html#sidescrollerExamples
 from cmu_112_graphics import *
 import random
 import math
@@ -8,6 +9,7 @@ import math
 #---------------------------------Start mode----------------------------------
 class StartMode(Mode): 
     def appStarted(mode):
+        #following picture from https://twitter.com/cmubuggy
         mode.background = mode.loadImage('buggy.png')
         mode.background = mode.scaleImage(mode.background, 5/3)
 
@@ -34,7 +36,7 @@ def make2dList(rows, cols):
 class Racer(object):
     def __init__(self, name, appwidth, appheight):
         self.name = name
-        self.character = 'red'
+        self.color = 'red'
         #self.image =
         self.xc = appwidth//2
         self.yc = appwidth//2
@@ -47,8 +49,16 @@ class Racer(object):
             (self.xc-self.width, self.yc+self.length),\
                 (self.xc+self.width, self.yc+self.length),\
                     (self.xc+self.width, self.yc-self.length)]
+        self.pictures = [f'{self.color}SideL.png', f'{self.color}TurnL.png',\
+             f'{self.color}Str.png', f'{self.color}TurnR.png',\
+                 f'{self.color}SideR.png']
+        self.currPic = self.pictures[2]
+        '''
+        pic = mode.loadImage(mode.player.currPic)
+        pic = mode.scaleImage(pic, 1/3)
+        '''
+        self.picNum = 2
         
-
 class Opponent(Racer):
     def __init__(self, appwidth, appheight):
         super().__init__('CPU', appwidth, appheight)
@@ -63,39 +73,58 @@ def setTrack(grid, rows, cols): #going to make this randomly generating
         grid[row][10] = True
 
 def createTrack(grid, rows, cols):
+    #following derived from https://www.cs.cmu.edu/~112/notes/maze-solver.py
     #make it a little more likely to go straight ahead by adding it twice 
     #in my list
-    directions = [(1,0), (0,1), (-1,0),(0,-1), (0,-1)]
-
-    tempgrid = copy.deepcopy(grid)
+    directions = [(1,0), (0,1), (-1,0),(0,-1)]
     visited = set()
-    targetRow, targetCol = 0, cols//2
-    def solve(row,col):
+    targetRow = 0 #end in the top middle
+
+        
+    def findPath(row, col, depth):
+        print(depth)
+        '''
+        if depth > 80:
+            print('started over----------------------------------------------')
+            row = rows-1
+            col = cols//2
+            depth = 0
+            visited.clear()
+
+        for r in range(len(grid)):
+            for c in range(len(grid[0])):
+                if (r,c) in visited:
+                    grid[r][c] = 1
+                else:
+                    grid[r][c] = 0
+        print2dList(grid)
+        '''
         #base cases
         if (row, col) in visited:
             return False
         visited.add((row, col))
-        if (row, col) == (targetRow, targetCol): return True
+        if row == targetRow: return True
         #randomize directions
         random.shuffle(directions)
         for stepx, stepy in directions:
-            if isValid(tempgrid, row+stepy, col+stepx, visited):
-                if solve(row+stepy, col+stepx):
-                    return True
+            depth += 1
+            print(str(stepx) +" "+str(stepy))
+            if isValid(grid, row+stepy, col+stepx, visited):
+                if findPath(row+stepy, col+stepx, depth+1): return True
 
         visited.remove((row,col))
         return False
 
-    if solve(rows-1, cols//2):
+ 
+    if findPath(rows-1, cols//2, 0):
         for r,c in visited:
-            tempgrid[r][c] = True
-        return tempgrid
-    else:
-        return grid
+            grid[r][c] = True
 
-def isValid(tempgrid, row, col, visited):
-    rows,cols = len(tempgrid),len(tempgrid[0])
-    if not (0<=row<rows and 0<=col<cols): 
+    return grid
+
+def isValid(grid, row, col, visited):
+    rows,cols = len(grid),len(grid[0])
+    if not (0 <= row < rows and 0 <= col < cols): 
         return False
     directions = [(1,0), (0,1), (-1,0),(0,-1)]
     sideCounter = 0
@@ -108,6 +137,37 @@ def isValid(tempgrid, row, col, visited):
         return True
     else:
         return False
+#----------------------------------------------------------------------------
+
+def maxItemLength(a):
+    maxLen = 0
+    rows = len(a)
+    cols = len(a[0])
+    for row in range(rows):
+        for col in range(cols):
+            maxLen = max(maxLen, len(str(a[row][col])))
+    return maxLen
+
+# Because Python prints 2d lists on one row,
+# we might want to write our own function
+# that prints 2d lists a bit nicer.
+def print2dList(a):
+    if (a == []):
+        # So we don't crash accessing a[0]
+        print([])
+        return
+    rows, cols = len(a), len(a[0])
+    fieldWidth = maxItemLength(a)
+    print('[')
+    for row in range(rows):
+        print(' [ ', end='')
+        for col in range(cols):
+            if (col > 0): print(', ', end='')
+            print(str(a[row][col]).rjust(fieldWidth), end='')
+        print(' ]')
+    print(']')
+
+
 
 #---------------------------Game Mode------------------------------------------
 
@@ -117,36 +177,79 @@ class GameMode(Mode):
         mode.cols = 20
         mode.grid = make2dList(mode.rows, mode.cols)
         mode.grid = createTrack(mode.grid, mode.rows, mode.cols)
-        mode.cellSize = 20
+        mode.cellSize = 500
+
         #name = mode.getUserInput('Enter your name:')
         mode.player = Racer('name', mode.width, mode.height)
         mode.friction = 1
-        mode.topSpeed = 100
+        mode.topSpeed = 25
         mode.racers = []
         mode.racers.append(mode.player)
-        mode.offsetX = 200
-        mode.offsetY = 150
+        mode.offsetX = -1*(mode.cellSize*(mode.cols//2))
+        mode.offsetY = -1*(mode.cellSize*(mode.rows-1))
+        #mode.direction = 'Up'
 
     def keyPressed(mode, event):
         if event.key == 'm':
             mode.app.setActiveMode(mode.app.MenuMode)
-        elif event.key == 'Right':
-            if mode.player.scrollX <= mode.topSpeed:
-                mode.player.scrollX += 10
-            if mode.player.angle <= 50:
+            mode.appStarted()
+        elif event.key in ['Right', 'Left', 'Up', 'Down']:
+            mode.moveRacer(event.key)
+
+    def moveRacer(mode, direction):
+        if direction == 'Right':
+            if not mode.playerOnTrack():
+                mode.player.scrollX = 0
+            elif mode.player.scrollX <= mode.topSpeed:
+                mode.player.scrollX += 5
+            if mode.player.angle <= 30:
                 mode.player.angle += 10
                 mode.turnRacer(mode.player)
-        elif event.key == 'Left':
-            if mode.player.scrollX >= -1*mode.topSpeed:
-                mode.player.scrollX -= 10
-            if mode.player.angle >= -50: 
+        elif direction == 'Left':
+            if not mode.playerOnTrack():
+                mode.player.scrollX = 0
+            elif mode.player.scrollX >= -1*mode.topSpeed:
+                mode.player.scrollX -= 5
+            if mode.player.angle >= -30: 
                 mode.player.angle -= 10
                 mode.turnRacer(mode.player)
-        elif event.key == 'Up' and mode.player.scrollY <= mode.topSpeed:
-            mode.player.scrollY -= 20
-        elif event.key == 'Down' and mode.player.scrollY >= -1*mode.topSpeed:
-            mode.player.scrollY += 20
+        elif direction == 'Up':
+            if not mode.playerOnTrack():
+                mode.player.scrollY = 0
+            elif mode.player.scrollY >= -1*mode.topSpeed:
+                mode.player.scrollY -= 5
+        elif direction == 'Down':
+            if not mode.playerOnTrack():
+                mode.player.scrollY = 0
+            elif  mode.player.scrollY <= mode.topSpeed:
+                mode.player.scrollY += 5
 
+    def playerOnTrack(mode):
+        row, col = mode.getCell(mode.player.xc,mode.player.yc)
+        if mode.grid[row][col] == True:
+            return True
+        
+        return False
+
+#-------------------------------------------------------------------------
+#derived from https://www.cs.cmu.edu/~112/notes/notes-animations-part1.html
+    def getCell(mode, x, y):
+        # aka "viewToModel"
+        # return (row, col) in which (x, y) occurred or (-1, -1) if outside grid
+        #if (not mode.pointInGrid(x, y)):
+            #return (-1, -1)
+
+        row = int((y - mode.offsetY) / mode.cellSize) 
+        col = int((x - mode.offsetX) / mode.cellSize)
+
+        return row, col
+
+    def pointInGrid(mode, x, y):
+    # return True if (x, y) is inside the grid defined by app.
+        return ((-1*mode.offsetX<= x <=(mode.cols*mode.cellSize)-mode.offsetX)\
+         and (-1*mode.offsetY<= y <=(mode.rows*mode.cellSize)-mode.offsetY))
+
+#--------------------------------------------------------------------------
 
 #https://stackoverflow.com/questions/36620766/rotating-a-square-on-tkinter-canvas
     def rotateRacer(mode, points, angle, center):
@@ -182,10 +285,12 @@ class GameMode(Mode):
         y0 -= mode.player.scrollY
         y1 -= mode.player.scrollY
         canvas.create_rectangle(x0, y0, x1, y1, fill= color, outline='black', \
-                width = 2)    
+                width = 1)    
 
     def drawPlayer(mode, canvas):
-        canvas.create_polygon(mode.player.points, fill='red')
+        #canvas.create_polygon(mode.player.points, fill='red')
+        canvas.create_image(mode.player.xc, mode.player.yc,\
+            image = ImageTk.PhotoImage(mode.player.currPic))
         canvas.create_text(mode.player.xc, mode.player.yc-15,\
             text=mode.player.name)
 
@@ -225,6 +330,7 @@ class GameMode(Mode):
 class MenuMode(Mode):
     def appStarted(mode):
         buttons = []
+        #following picture from https://www.cmu.edu/brand/brand-guidelines/visual-identity/colors.html
         mode.background = mode.loadImage('tartan.png')
         mode.background = mode.scaleImage(mode.background, 5/3)
 
