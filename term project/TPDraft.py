@@ -1,4 +1,4 @@
-#term projedct ting by Isabella Rhee
+#term project ting by Isabella Rhee
 
 #cmu graphics from 
 #http://www.cs.cmu.edu/~112/notes/notes-animations-part3.html#sidescrollerExamples
@@ -85,7 +85,7 @@ def createTrack(grid, rows, cols):
         print2dList(grid)
         '''
         #base cases
-        if depth > 80:
+        if depth > 80: # this doesnt work like i want it to
             return False
 
         if (row, col) in visited:
@@ -103,7 +103,6 @@ def createTrack(grid, rows, cols):
         visited.remove((row,col))
         return False
 
- 
     if findPath(rows-1, cols//2, 0):
         for r,c in visited:
             grid[r][c] = True
@@ -171,7 +170,7 @@ class GameMode(Mode):
         mode.player.currPic = mode.loadImage(mode.player.currPic)
         mode.player.currPic = mode.scaleImage(mode.player.currPic, 1/2)
         mode.friction = 1
-        mode.topSpeed = 25
+        mode.topSpeed = 30
         mode.racers = []
         mode.racers.append(mode.player)
         mode.offsetX = -1*(mode.cellSize*(mode.cols//2))
