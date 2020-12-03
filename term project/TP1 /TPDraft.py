@@ -24,7 +24,7 @@ class StartMode(Mode):
              text = 'press any button to continue', font = 'Impact 25')
         
     def keyPressed(mode, event):
-        mode.app.setActiveMode(mode.app.PickPlayerMode)
+        mode.app.setActiveMode(mode.app.MenuMode)
 
 #-----------------------other stuff--------------------------------------------
 
@@ -34,29 +34,26 @@ def make2dList(rows, cols):
 
 #--------------------------Racer Class------------------------------------------
 class Racer(object):
-    def __init__(self, name, appwidth, appheight, color):
+    def __init__(self, name, appwidth, appheight):
         self.name = name
-        self.color = color
+        self.color = 'red'
         self.xc = appwidth//2
         self.yc = appwidth//2
         self.scrollX = 0
         self.scrollY = 0
-        # I made all of the little car pictures myself using snapchat lol
         self.pictures = [f'{self.color}SideL.png', f'{self.color}TurnL.png',\
              f'{self.color}Str.png', f'{self.color}TurnR.png',\
                  f'{self.color}SideR.png']
         self.picNum = 2         
         self.currPic = self.pictures[self.picNum]
-    
-class Opponent(Racer):
-    def __init__(self, appwidth, appheight, color):
-        super().__init__('CPU', appwidth, appheight, color)
+
         
-        self.xc = appwidth//2 - 10
-        self.yc = appwidth//2 - 10
-        self.offsetX = 0
-        self.offsetY = 0
-        self.visited = []
+class Opponent(Racer):
+    def __init__(self, appwidth, appheight):
+        super().__init__('CPU', appwidth, appheight)
+        self.color = 'black'
+        #self.xc =
+        #self.yc =
 
 #--------------------------drawing the track-----------------------------------
 
@@ -167,9 +164,9 @@ class GameMode(Mode):
         mode.grid = make2dList(mode.rows, mode.cols)
         mode.grid = createTrack(mode.grid, mode.rows, mode.cols)
         mode.cellSize = 500
-        name = mode.app.PickPlayerMode.name
-        mode.player = Racer(name, mode.width, mode.height,\
-             mode.app.PickPlayerMode.chosen)
+
+        #name = mode.getUserInput('Enter your name:')
+        mode.player = Racer('name', mode.width, mode.height)
         mode.player.currPic = mode.loadImage(mode.player.currPic)
         mode.player.currPic = mode.scaleImage(mode.player.currPic, 1/2)
         mode.friction = 1
@@ -178,68 +175,43 @@ class GameMode(Mode):
         mode.racers.append(mode.player)
         mode.offsetX = -1*(mode.cellSize*(mode.cols//2))
         mode.offsetY = -1*(mode.cellSize*(mode.rows-1))
-        mode.opponent = Opponent(mode.width, mode.height, 'blue')
-        mode.opponent.currPic = mode.loadImage(mode.opponent.currPic)
-        mode.opponent.currPic = mode.scaleImage(mode.opponent.currPic, 1/2)
-        mode.started = False
-        mode.timer = 59
-        mode.timer2 = 0
-        for c in range(mode.cols):
-            if mode.grid[0][c] == True:
-                mode.goal = (0, c) #for the AI
+        #mode.direction = 'Up'
 
     def keyPressed(mode, event):
         if event.key == 'm':
             mode.app.setActiveMode(mode.app.MenuMode)
             mode.appStarted()
-        elif event.key in ['Right', 'Left', 'Up', 'Down'] and mode.started:
-            mode.moveRacer(event.key, mode.player)
+        elif event.key in ['Right', 'Left', 'Up', 'Down']:
+            mode.moveRacer(event.key)
 
-#------------------------------racer stuff-------------------------------------
-
-    def moveRacer(mode, direction, player):
+    def moveRacer(mode, direction):
         if direction == 'Right':
-            if not mode.playerOnTrack(player.xc, player.yc):
-                if mode.playerOnTrack(player.xc + 30, player.yc):
-                    player.scrollX = 0
-                    mode.offsetX -= 5
-                else:
-                    player.scrollX = 0
-            elif player.scrollX <= mode.topSpeed:
-                player.scrollX += 5     
+            if not mode.playerOnTrack():
+                mode.player.scrollX = 0
+            elif mode.player.scrollX <= mode.topSpeed:
+                mode.player.scrollX += 5     
         elif direction == 'Left':
-            if not mode.playerOnTrack(player.xc, player.yc):
-                if mode.playerOnTrack(player.xc - 30, player.yc):
-                    player.scrollX = 0
-                    mode.offsetX += 5
-                else:
-                    player.scrollX = 0
-            elif player.scrollX >= -1*mode.topSpeed:
-                player.scrollX -= 5
+            if not mode.playerOnTrack():
+                mode.player.scrollX = 0
+            elif mode.player.scrollX >= -1*mode.topSpeed:
+                mode.player.scrollX -= 5
         elif direction == 'Up':
-            if not mode.playerOnTrack(player.xc, player.yc):
-                if mode.playerOnTrack(player.xc, player.yc - 30):
-                    player.scrollY = 0
-                    mode.offsetY += 5
-                else:
-                    player.scrollY = 0
-            elif player.scrollY >= -1*mode.topSpeed:
-                player.scrollY -= 5
+            if not mode.playerOnTrack():
+                mode.player.scrollY = 0
+            elif mode.player.scrollY >= -1*mode.topSpeed:
+                mode.player.scrollY -= 5
         elif direction == 'Down':
-            if not mode.playerOnTrack(player.xc, player.yc):
-                if mode.playerOnTrack(player.xc, player.yc + 30):
-                    player.scrollY = 0
-                    mode.offsetY -= 5
-                else:
-                    player.scrollY = 0
-            elif player.scrollY <= mode.topSpeed:
-                player.scrollY += 5
+            if not mode.playerOnTrack():
+                mode.player.scrollY = 0
+            elif  mode.player.scrollY <= mode.topSpeed:
+                mode.player.scrollY += 5
 
-        mode.turnRacer(player, direction)
+        mode.turnRacer(mode.player, direction)
 
-    def playerOnTrack(mode, x, y):
+
+    def playerOnTrack(mode):
         #check if player is within bounds of track
-        row, col = mode.getCell(x, y)
+        row, col = mode.getCell(mode.player.xc,mode.player.yc)
         if mode.grid[row][col] == True:
             return True
         
@@ -262,13 +234,6 @@ class GameMode(Mode):
     # return True if (x, y) is inside the grid defined by app.
         return ((-1*mode.offsetX<= x <=(mode.cols*mode.cellSize)-mode.offsetX)\
          and (-1*mode.offsetY<= y <=(mode.rows*mode.cellSize)-mode.offsetY))
-
-    def getCellCoordinates(mode, row, col):
-        x0 = col * mode.cellSize - mode.offsetX
-        y1 = row * mode.cellSize - mode.offsetY
-        x = x0 + int(.5*mode.cellSize)
-        y = y1 + int(.5*mode.cellSize)
-        return x, y
 
 #--------------------------------------------------------------------------
     def turnRacer(mode, player, direction):
@@ -296,52 +261,6 @@ class GameMode(Mode):
         player.currPic = mode.loadImage(player.pictures[player.picNum])
         player.currPic = mode.scaleImage(player.currPic, 1/2)
 
-    def updateOpponent(mode, opponent): #TO DO idk
-        opponent.offsetX -= mode.player.scrollX
-        opponent.offsetY -= mode.player.scrollY
-        
-        print("opponent x: " + str(opponent.xc) + "opponent y: " \
-            + str(opponent.yc))
-        opponent.currPic = mode.loadImage(opponent.pictures[opponent.picNum])
-        opponent.currPic = mode.scaleImage(opponent.currPic, 1/2)
-
-    def chooseDirection(mode):
-        #change scrollx and scrolly of opponent
-        o = mode.opponent #so i dont have to keep typing it
-        #get the current cell
-        row, col = mode.getCell(o.xc, o.yc)
-        print(row, col)
-        if (row, col) not in o.visited:
-            o.visited.append((row, col))
-        dirx = 0
-        diry = 0
-
-        directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
-        for dy, dx in directions:
-            if (0 <= row+dx < mode.rows) and (0 <= col+dy < mode.cols): 
-                print("yay")
-                if not (row+dx, col+dy) in o.visited\
-                     and mode.grid[row+dx][col+dy]:
-                    dirx, diry = dy, dx #idk why these r swtiched it makes no sense but it works
-                    print(dx, dy)
-                    break
-                
-        dirx = dirx*6
-        diry = diry*6
-        if dirx < 0:
-            direction = 'Left'
-        elif dirx > 0:
-            direction = 'Right'
-        elif dirx > 0:
-            direction = 'Down'
-        else:
-            direction = 'Up'
-  
-        print(dirx, diry)
-        return dirx, diry, direction
-
-    #-----------------------Drawing Stuff--------------------------------
-
     def drawCell(mode, canvas, row, col, color):
         x0 = (mode.cellSize * col) + mode.offsetX
         y0 = (mode.cellSize * row)  + mode.offsetY
@@ -354,19 +273,11 @@ class GameMode(Mode):
         canvas.create_rectangle(x0, y0, x1, y1, fill= color, outline='black', \
                 width = 1)    
 
-    def drawPlayer(mode, canvas, player):
-        canvas.create_image(player.xc, player.yc,\
-            image = ImageTk.PhotoImage(player.currPic))
-        canvas.create_text(player.xc, player.yc-40,\
-            text=player.name)
-    
-    def drawOpponent(mode, canvas, opponent):
-        canvas.create_image(opponent.xc + opponent.offsetX,\
-             opponent.yc+opponent.offsetY,\
-                 image = ImageTk.PhotoImage(opponent.currPic))
-        canvas.create_text(opponent.xc + opponent.offsetX,\
-             opponent.yc-40 + opponent.offsetY,\
-            text=opponent.name)
+    def drawPlayer(mode, canvas):
+        canvas.create_image(mode.player.xc, mode.player.yc,\
+            image = ImageTk.PhotoImage(mode.player.currPic))
+        canvas.create_text(mode.player.xc, mode.player.yc-40,\
+            text=mode.player.name)
 
     def drawTrack(mode, canvas):
         #setTrack(mode.grid, mode.rows, mode.cols)
@@ -378,60 +289,26 @@ class GameMode(Mode):
                     color = 'black'
                 mode.drawCell(canvas, r, c, color)
 
-    def drawTimer(mode, canvas):
-        font = 'Impact 45'
-        if mode.timer <= 15:
-            canvas.create_text(mode.width//2, 25,\
-                text = 'GO!', font = font)
-        else:
-            canvas.create_text(mode.width//2, 100,\
-                text = f'{int(mode.timer // 15)}', font = font)
-
     def redrawAll(mode, canvas):
-        mode.drawTrack(canvas)
-        canvas.create_text(mode.width-100, 10,\
+        canvas.create_text(mode.width/2, 10,\
             text ="press ctrl-p to pause, m for main menu", font = 'Arial 12')
-        mode.drawPlayer(canvas, mode.player)
-        mode.drawOpponent(canvas, mode.opponent)
-        mode.drawTimer(canvas)
+        mode.drawTrack(canvas)
+        mode.drawPlayer(canvas)
     
     def timerFired(mode):
-        if not mode.started:
-            mode.timer -= 1.5
-            if mode.timer <= 0:
-                mode.started = True
-                mode.player.xc, mode.player.yc
-        else:
-            #AI opponent shit
+        mode.updateRacer(mode.player)
 
-            mode.timer2 += 1
-            if int(mode.timer // 7) == (mode.timer // 7):
-                mode.opponent.scrollX, mode.opponent.scrollY, oppdir\
-                     = mode.chooseDirection()
+        #slowing down the thingy
+        if mode.player.scrollX > 0:
+            mode.player.scrollX -= mode.friction
+        elif mode.player.scrollX < 0:
+            mode.player.scrollX += mode.friction
+        
+        if mode.player.scrollY > 0:
+            mode.player.scrollY -= mode.friction
+        elif mode.player.scrollY < 0:
+            mode.player.scrollY += mode.friction
 
-                mode.opponent.xc += mode.opponent.scrollX
-                mode.opponent.yc += mode.opponent.scrollY
-                mode.turnRacer(mode.opponent, oppdir)
-
-            #slowing down the thingy
-            for car in [mode.player, mode.opponent]:
-                if mode.playerOnTrack(car.xc, car.yc):
-                    if car == mode.player:
-                        mode.updateRacer(car)
-                    else:
-                        mode.updateOpponent(car)
-
-                    if car.scrollX > 0:
-                        car.scrollX -= mode.friction
-                    elif car.scrollX < 0:
-                        car.scrollX += mode.friction
-                    
-                    if car.scrollY > 0:
-                        car.scrollY -= mode.friction
-                    elif car.scrollY < 0:
-                        car.scrollY += mode.friction
-
-       
 #-----------------------------Menu Mode----------------------------------------
 
 class MenuMode(Mode):
@@ -476,7 +353,6 @@ class MenuMode(Mode):
     
 class PickPlayerMode(Mode):
     def appStarted(mode):
-        
         mode.pictures = ['redStr.png' , 'blueStr.png', 'greenStr.png', \
             'yellowStr.png']
         mode.redpic = mode.loadImage(mode.pictures[0])
@@ -487,34 +363,35 @@ class PickPlayerMode(Mode):
         mode.greenpic = mode.scaleImage(mode.greenpic, 3/5)
         mode.yellowpic = mode.loadImage(mode.pictures[3])
         mode.yellowpic = mode.scaleImage(mode.yellowpic, 3/5)
-        mode.chosen = 'red'
-        mode.name = mode.getUserInput('Enter your name:')
+
+
     def redrawAll(mode, canvas):
         canvas.create_text(mode.width//2, 50, text = 'Choose your racer color',\
             font = 'Impact 45')
 
+        colorChosen = 'red'
         canvas.create_text(mode.width//2, 700,\
-             text = f'Current color: {mode.chosen}', font = 'Impact 30')
+             text = f'Current color: {colorChosen}', font = 'Impact')
 
         #back button
         canvas.create_rectangle(10, 10, 60, 40, fill = 'red')
-        canvas.create_text(35, 25, text = 'Menu', font = 'Arial 12')
+        canvas.create_text(35, 25, text = 'back', font = 'Arial 12')
 
         #color choices
         #red
-        canvas.create_rectangle(50, 300, 150, 500, fill = 'white', width = 0)
+        canvas.create_rectangle(50, 300, 150, 500, fill = 'white')
         canvas.create_image(100, 400,image=ImageTk.PhotoImage(mode.redpic))
 
         #blue
-        canvas.create_rectangle(250, 300, 350, 500, fill = 'white', width = 0)
+        canvas.create_rectangle(250, 300, 350, 500, fill = 'white')
         canvas.create_image(300, 385,image=ImageTk.PhotoImage(mode.bluepic))
 
         #green
-        canvas.create_rectangle(450, 300, 550, 500, fill = 'white', width = 0)
+        canvas.create_rectangle(450, 300, 550, 500, fill = 'white')
         canvas.create_image(500, 385,image=ImageTk.PhotoImage(mode.greenpic))
 
         #yellow
-        canvas.create_rectangle(650, 300, 750, 500, fill = 'white', width = 0)
+        canvas.create_rectangle(650, 300, 750, 500, fill = 'white')
         canvas.create_image(700, 400,image=ImageTk.PhotoImage(mode.yellowpic))
      
     def mousePressed(mode, event):
@@ -522,15 +399,13 @@ class PickPlayerMode(Mode):
             (10 <= event.y <= 40)):
             mode.app.setActiveMode(mode.app.MenuMode)
         elif ((50 <= event.x <= 150) and (300 <= event.y <= 500)):
-            mode.chosen = 'red'
+            mode.player.color = 'red'
         elif ((250 <= event.x <= 350) and (300 <= event.y <= 500)):
-            mode.chosen = 'blue'
+            mode.player.color = 'blue'
         elif ((450 <= event.x <= 550) and (300 <= event.y <= 500)):
-            mode.chosen = 'green'
+            mode.player.color = 'green'
         elif ((650 <= event.x <= 750) and (300 <= event.y <= 500)):
-            mode.chosen = 'yellow'
-        else:
-            mode.chosen = 'red'
+            mode.player.color = 'yellow'
 
 #----------------------------app setup-----------------------------------------
 class MyModalApp(ModalApp):
