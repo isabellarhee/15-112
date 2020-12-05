@@ -50,7 +50,7 @@ class Racer(object):
     
 class Opponent(Racer):
     def __init__(self, appwidth, appheight, color):
-        super().__init__('CPU', appwidth, appheight, color)
+        super().__init__('ugly', appwidth, appheight, color)
         
         self.xc = 230
         self.yc = 250
@@ -188,9 +188,11 @@ class GameMode(Mode):
         mode.started = False
         mode.timer = 59
         mode.timer2 = 0
+        mode.goal = (-1, -1)
         for c in range(mode.cols):
             if mode.grid[0][c] == True:
                 mode.goal = (0, c) #for the AI
+        mode.winner = 'No One rn'
 
     def keyPressed(mode, event):
         if event.key == 'm':
@@ -268,8 +270,9 @@ class GameMode(Mode):
          and (-1*mode.offsetY<= y <=(mode.rows*mode.cellSize)-mode.offsetY))
 
     def getCellCoordinates(mode, row, col):
-        x0 = (col * mode.cellSize) - mode.offsetX
-        y1 = (row * mode.cellSize) - mode.offsetY
+        #remember offsetx and offsety are negative numbers
+        x0 = (col * mode.cellSize) + mode.offsetX
+        y1 = (row * mode.cellSize) + mode.offsetY
         x = x0 + int(.5*mode.cellSize)
         y = y1 + int(.5*mode.cellSize)
         return x, y
@@ -354,12 +357,7 @@ class GameMode(Mode):
             #use this to check if the car is *close* to the middle of the box
             #aka if the coordinates of the center are within this 8x8 box 
             #which is in the middle of the cell
-        '''
-        if (x0 <= o.xc <= x1) and (y0 <= o.yc <= y1):
-            return True
-        else:
-            return False
-        '''
+
 
         if (o.direction == 'Left' or o.direction == 'Right') and \
              x0 <= o.xc <= x1:
@@ -393,6 +391,13 @@ class GameMode(Mode):
 
         print('moving')
         return scrollX, scrollY
+
+    def atFinish(mode, player):
+        row, col = mode.getCell(player.xc, player.yc)
+        if (row, col) == mode.goal:
+            return True
+        else:
+            return False
 
     #-----------------------Drawing Stuff--------------------------------
 
@@ -472,6 +477,11 @@ class GameMode(Mode):
 
             #slowing down the thingy
             for car in [mode.player, mode.opponent]:
+                if mode.atFinish(car):
+                    mode.winner = car.name
+                    mode.app.setActiveMode(mode.app.GameOver)
+                    
+
                 if mode.playerOnTrack(car.xc, car.yc):
                     if car == mode.player:
                         mode.updateRacer(car)
@@ -517,7 +527,7 @@ class MenuMode(Mode):
             fill = 'red')
         canvas.create_text(mode.width/2, 310, text = 'pick character',\
              font = font)
-        #other buttons
+
 
     def mousePressed(mode, event):
         #clicked start
@@ -589,6 +599,42 @@ class PickPlayerMode(Mode):
         else:
             mode.chosen = 'red'
 
+#----------------------------Game Over Mode-------------------------------------
+
+class GameOver(Mode):
+    def appStarted(mode):
+        mode.winner = mode.app.GameMode.winner
+
+    def drawButtons(mode, canvas):
+        #back to menu
+        font = 'Impact 30'
+        canvas.create_rectangle(mode.width/2-200, 250, mode.width/2+200, 350, \
+            fill = 'red')
+        canvas.create_text(mode.width/2, 300, text = 'Main Menu', font=font)
+        #exit game
+        canvas.create_rectangle(mode.width/2-200, 450, mode.width/2+200, 550, \
+            fill = 'red')
+        canvas.create_text(mode.width/2, 500, text = 'Exit Game',\
+             font = font)
+
+    def redrawAll(mode, canvas):
+        canvas.create_rectangle(0, 0, mode.width, mode.height, fill = 'black')
+        canvas.create_text(mode.width/2, 100, text='Game Over', fill = 'red',\
+            font = 'Impact 24')
+        canvas.create_text(mode.width/2, 150, text=f'Winner: {mode.winner}',\
+            fill = 'red', font = 'Impact 24')
+        mode.drawButtons(canvas)
+
+    def mousePressed(mode, event):
+        #clicked start
+        cx = mode.width/2
+        if ((cx-200 <= event.x <= cx+200) and\
+            (250 <= event.y <= 350)):
+            mode.app.setActiveMode(mode.app.MenuMode)
+        elif ((cx-200 <= event.x <= cx+200) and\
+            (450 <= event.y <= 550)):
+            sys.exit()
+
 #----------------------------app setup-----------------------------------------
 class MyModalApp(ModalApp):
     def appStarted(app):
@@ -596,6 +642,7 @@ class MyModalApp(ModalApp):
         app.GameMode = GameMode()
         app.MenuMode = MenuMode()
         app.PickPlayerMode = PickPlayerMode()
+        app.GameOver = GameOver()
         app.setActiveMode(app.StartMode)
         app.timerDelay = 50
 
