@@ -4,8 +4,7 @@ import random
 
 def createTrack(grid, rows, cols):
     #following derived from https://www.cs.cmu.edu/~112/notes/maze-solver.py
-    #make it a little more likely to go straight ahead by adding it twice 
-    #in my list
+
     directions = [(1,0), (0,1), (-1,0),(0,-1)]
     visited = set()
     targetRow = 0 #end in the top middle

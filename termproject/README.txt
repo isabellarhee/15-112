@@ -18,5 +18,5 @@ and https://pypi.org/project/playsound/)
 pip (or pip3) install playsound
 pip (or pip3) pip3 install -U PyObjC
 
-After this is installed, all you need to do is run the "TPDraft.py" file.
+After this is installed, all you need to do is run the "CMUBuggyRacer.py" file.
 The rest of the python files needed are in this folder.

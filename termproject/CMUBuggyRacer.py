@@ -60,6 +60,7 @@ class Opponent(Racer):
         self.visited = []
         self.inPastCell = False
         self.direction = 'Up'
+        
 
 #---------------------------Game Mode------------------------------------------
 
@@ -77,7 +78,7 @@ class GameMode(Mode):
         mode.player.currPic = mode.loadImage(mode.player.currPic)
         mode.player.currPic = mode.scaleImage(mode.player.currPic, 1/2)
         mode.friction = 1
-        mode.topSpeed = 30
+        mode.topSpeed = 18
         mode.racers = []
         mode.racers.append(mode.player)
         mode.offsetX = -1*(mode.cellSize*(mode.cols//2))
@@ -140,6 +141,11 @@ class GameMode(Mode):
                 else:
                     color = 'black'
                 mode.drawCell(canvas, r, c, color)
+
+        for c in range(mode.cols):
+            if mode.grid[0][c] == True:
+                x,y = getCellCoordinates(mode, 0, c)
+                canvas.create_text(x, y, text='Finish!!', font='Impact 45')
 
     def drawTimer(mode, canvas):
         font = 'Impact 45'

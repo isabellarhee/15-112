@@ -2,10 +2,6 @@
 
 #derived from https://www.cs.cmu.edu/~112/notes/notes-animations-part1.html
 def getCell(mode, x, y):
-        # aka "viewToModel"
-        # return (row, col) in which (x, y) occurred or (-1, -1) if outside grid
-        #if (not mode.pointInGrid(x, y)):
-            #return (-1, -1)
 
     row = int((y - mode.offsetY) / mode.cellSize) 
     col = int((x - mode.offsetX) / mode.cellSize)
