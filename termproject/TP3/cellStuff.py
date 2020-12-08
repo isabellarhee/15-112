@@ -8,6 +8,7 @@ def getCell(mode, x, y):
 
     return row, col
 
+#https://www.cs.cmu.edu/~112/notes/notes-animations-part1.html
 def pointInGrid(mode, x, y):
     # return True if (x, y) is inside the grid defined by app.
     return ((mode.offsetX<= x <=(mode.cols*mode.cellSize)-mode.offsetX)\
