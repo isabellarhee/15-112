@@ -118,19 +118,24 @@ def moveOpponent(mode):
     direction = mode.opponent.direction
     scrollX = 0
     scrollY = 0
+    turnRacer(mode, mode.opponent, mode.opponent.direction)
+    if mode.app.MenuMode.wins <= 5: #capping off the opponent speed
+        factor = mode.app.MenuMode.wins
+    else:
+        factor = 5
 
     if direction == 'Right':
-        scrollX = 10 + (2 * mode.app.MenuMode.wins)
+        scrollX = 10 + (2 * factor)
         scrollY = 0
     elif direction == 'Left':
-        scrollX = -1*(10 + (2 * mode.app.MenuMode.wins))
+        scrollX = -1*(10 + (2 * factor))
         scrollY = 0
     elif direction == 'Up':
         scrollX = 0
-        scrollY = -1*(10 + (2 * mode.app.MenuMode.wins))
+        scrollY = -1*(10 + (2 * factor))
     else:
         scrollX = 0
-        scrollY = 10 + (2 * mode.app.MenuMode.wins)
+        scrollY = 10 + (2 * factor)
 
     print('moving')
     return scrollX, scrollY
